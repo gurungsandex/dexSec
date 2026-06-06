@@ -1,22 +1,33 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Search, Globe } from "lucide-react";
-import { TENANTS } from "@/lib/mock-data";
+import { useTenants } from "@/lib/hooks";
 import { useUIStore } from "@/store/ui-store";
+import type { Tenant } from "@/lib/supabase/types";
 
-function TenantAvatar({ short, color, size = 28 }: { short: string; color: string; size?: number }) {
+const AVATAR_COLORS = ["#6366f1","#8b5cf6","#ec4899","#f59e0b","#10b981","#3b82f6","#ef4444","#14b8a6"];
+
+function tenantShort(name: string) { return name.slice(0, 2).toUpperCase(); }
+
+function tenantColor(id: string) {
+  let h = 0;
+  for (const c of id) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+function TenantAvatar({ t, size = 28 }: { t: Tenant; size?: number }) {
   return (
-    <div
-      className="flex items-center justify-center rounded-[7px] text-white font-bold text-[11px] shrink-0"
-      style={{ width: size, height: size, background: color }}
-    >
-      {short}
+    <div className="flex items-center justify-center rounded-[7px] text-white font-bold text-[11px] shrink-0"
+      style={{ width: size, height: size, background: tenantColor(t.id) }}>
+      {tenantShort(t.name)}
     </div>
   );
 }
 
 export function TenantSwitcher() {
   const { scope, setScope } = useUIStore();
+  const { data: tenantsData = [] } = useTenants();
+  const tenants = tenantsData as Tenant[];
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -29,9 +40,9 @@ export function TenantSwitcher() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const current = scope === "all" ? null : TENANTS.find((t) => t.id === scope);
-  const filtered = TENANTS.filter((t) =>
-    !query || t.name.toLowerCase().includes(query.toLowerCase()) || t.industry.toLowerCase().includes(query.toLowerCase())
+  const current = scope === "all" ? null : tenants.find((t) => t.id === scope);
+  const filtered = tenants.filter((t) =>
+    !query || t.name.toLowerCase().includes(query.toLowerCase()) || (t.industry ?? "").toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -41,7 +52,7 @@ export function TenantSwitcher() {
         className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] hover:bg-surface-3 transition-colors"
       >
         {current ? (
-          <TenantAvatar short={current.short} color={current.color} />
+          <TenantAvatar t={current} />
         ) : (
           <div className="w-7 h-7 rounded-[7px] flex items-center justify-center" style={{ background: "var(--primary-tint)" }}>
             <Globe size={14} color="var(--primary)" />
@@ -52,7 +63,7 @@ export function TenantSwitcher() {
             {current ? current.name : "All Clients"}
           </div>
           <div className="text-[11px] leading-none mt-0.5" style={{ color: "var(--ink-4)" }}>
-            {current ? current.tier : "Portfolio view"}
+            {current ? (current.industry ?? current.status) : "Portfolio view"}
           </div>
         </div>
         <ChevronDown size={14} color="var(--ink-4)" className={`ml-1 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -77,7 +88,6 @@ export function TenantSwitcher() {
             </div>
           </div>
           <div className="overflow-y-auto max-h-80">
-            {/* All clients option */}
             <button
               className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-2 transition-colors text-left"
               onClick={() => { setScope("all"); setOpen(false); setQuery(""); }}
@@ -89,11 +99,8 @@ export function TenantSwitcher() {
                 <div className="text-[13px] font-semibold" style={{ color: "var(--ink)" }}>All Clients</div>
                 <div className="text-[11px]" style={{ color: "var(--ink-4)" }}>Portfolio view</div>
               </div>
-              {scope === "all" && (
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--primary)" }} />
-              )}
+              {scope === "all" && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--primary)" }} />}
             </button>
-            {/* Divider */}
             <div className="my-1 border-t" style={{ borderColor: "var(--border-faint)" }} />
             {filtered.map((t) => (
               <button
@@ -101,18 +108,17 @@ export function TenantSwitcher() {
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-2 transition-colors text-left"
                 onClick={() => { setScope(t.id); setOpen(false); setQuery(""); }}
               >
-                <TenantAvatar short={t.short} color={t.color} />
+                <TenantAvatar t={t} />
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-semibold truncate" style={{ color: "var(--ink)" }}>{t.name}</div>
-                  <div className="text-[11px]" style={{ color: "var(--ink-4)" }}>{t.industry} · {t.endpoints} endpoints</div>
+                  <div className="text-[11px]" style={{ color: "var(--ink-4)" }}>
+                    {t.industry ?? t.status} · {t.endpoints_total} endpoints
+                  </div>
                 </div>
-                <div
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: t.risk >= 67 ? "var(--crit)" : t.risk >= 50 ? "var(--high)" : t.risk >= 34 ? "var(--med)" : "var(--ok)" }}
+                <div className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: t.risk_score >= 67 ? "var(--crit)" : t.risk_score >= 50 ? "var(--high)" : t.risk_score >= 34 ? "var(--med)" : "var(--ok)" }}
                 />
-                {scope === t.id && (
-                  <div className="w-1.5 h-1.5 rounded-full ml-1" style={{ background: "var(--primary)" }} />
-                )}
+                {scope === t.id && <div className="w-1.5 h-1.5 rounded-full ml-1" style={{ background: "var(--primary)" }} />}
               </button>
             ))}
           </div>

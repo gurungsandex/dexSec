@@ -1,15 +1,17 @@
 "use client";
 import {
   LayoutDashboard, AlertTriangle, Monitor, Shield, Flame, Puzzle,
-  BarChart2, Settings, FileText, ClipboardList, Laptop, ShieldCheck
+  BarChart2, Settings, FileText, ClipboardList, Laptop, ShieldCheck, Bot,
+  Activity, Download
 } from "lucide-react";
 import type { NavItem } from "@/store/ui-store";
 import { useUIStore } from "@/store/ui-store";
-import { INCIDENTS } from "@/lib/mock-data";
+import { useIncidents } from "@/lib/hooks";
+import type { Incident } from "@/lib/supabase/types";
 
 interface NavGroup {
   label: string;
-  items: { id: NavItem; label: string; icon: React.ReactNode }[];
+  items: { id: NavItem; label: string; icon: React.ReactNode; badge?: string }[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -20,6 +22,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "incidents",  label: "Incidents",     icon: <AlertTriangle size={16} /> },
       { id: "soc",        label: "SOC Workspace", icon: <Monitor size={16} /> },
       { id: "endpoints",  label: "Endpoints",     icon: <Laptop size={16} /> },
+      { id: "telemetry",  label: "Telemetry",     icon: <Activity size={16} />, badge: "LIVE" },
     ],
   },
   {
@@ -33,10 +36,12 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Manage",
     items: [
-      { id: "assets",       label: "Assets",       icon: <BarChart2 size={16} /> },
-      { id: "reports",      label: "Reports",      icon: <FileText size={16} /> },
-      { id: "integrations", label: "Integrations", icon: <Puzzle size={16} /> },
-      { id: "audit",        label: "Audit Log",    icon: <ClipboardList size={16} /> },
+      { id: "agents",           label: "Agents",          icon: <Bot size={16} /> },
+      { id: "assets",           label: "Assets",          icon: <BarChart2 size={16} /> },
+      { id: "download-center",  label: "Download Center", icon: <Download size={16} /> },
+      { id: "reports",          label: "Reports",         icon: <FileText size={16} /> },
+      { id: "integrations",     label: "Integrations",    icon: <Puzzle size={16} /> },
+      { id: "audit",            label: "Audit Log",       icon: <ClipboardList size={16} /> },
     ],
   },
 ];
@@ -44,9 +49,8 @@ const NAV_GROUPS: NavGroup[] = [
 export function Sidebar() {
   const { nav, setNav, scope } = useUIStore();
 
-  const openIncidents = scope === "all"
-    ? INCIDENTS.filter((i) => i.status !== "resolved").length
-    : INCIDENTS.filter((i) => i.tenantId === scope && i.status !== "resolved").length;
+  const { data: incidents = [] } = useIncidents(scope);
+  const openIncidents = (incidents as Incident[]).filter((i) => i.status !== "resolved").length;
 
   return (
     <aside
@@ -89,6 +93,14 @@ export function Sidebar() {
                     {openIncidents}
                   </span>
                 )}
+                {item.badge && item.id !== "incidents" && (
+                  <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ background: "var(--ok)", color: "white" }}
+                  >
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -100,7 +112,7 @@ export function Sidebar() {
       {/* Coverage health card */}
       <div className="mx-3 mb-3 p-3 rounded-[10px]" style={{ background: "var(--ok-tint)", border: "1px solid var(--ok)" }}>
         <div className="flex items-center gap-2 mb-0.5">
-          <div className="w-2 h-2 rounded-full" style={{ background: "var(--ok)" }} />
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--ok)" }} />
           <span className="text-[11.5px] font-semibold" style={{ color: "var(--ok)" }}>Coverage Healthy</span>
         </div>
         <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>All agents reporting</div>

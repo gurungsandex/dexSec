@@ -1,5 +1,16 @@
 "use client";
-import { type Severity, severityColor } from "@/lib/mock-data";
+
+export type Severity = "critical" | "high" | "medium" | "low";
+
+function severityColor(sev: Severity) {
+  const map: Record<Severity, { fg: string; bg: string }> = {
+    critical: { fg: "var(--crit)", bg: "var(--crit-tint)" },
+    high:     { fg: "var(--high)", bg: "var(--high-tint)" },
+    medium:   { fg: "var(--med)",  bg: "var(--med-tint)"  },
+    low:      { fg: "var(--low)",  bg: "var(--low-tint)"  },
+  };
+  return map[sev];
+}
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
   const { fg, bg } = severityColor(severity);
@@ -21,6 +32,7 @@ export function StatusBadge({ status }: { status: string }) {
     resolved:     { fg: "var(--ok)", bg: "var(--ok-tint)" },
     online:       { fg: "var(--ok)", bg: "var(--ok-tint)" },
     atrisk:       { fg: "var(--high)", bg: "var(--high-tint)" },
+    at_risk:      { fg: "var(--high)", bg: "var(--high-tint)" },
     offline:      { fg: "var(--ink-4)", bg: "var(--surface-3)" },
     isolated:     { fg: "var(--crit)", bg: "var(--crit-tint)" },
   };
@@ -30,7 +42,7 @@ export function StatusBadge({ status }: { status: string }) {
       className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wide"
       style={{ color: style.fg, background: style.bg }}
     >
-      {status.replace("atrisk", "at risk")}
+      {status.replace("atrisk", "at risk").replace("at_risk", "at risk")}
     </span>
   );
 }

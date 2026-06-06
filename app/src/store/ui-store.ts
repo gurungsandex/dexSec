@@ -9,8 +9,11 @@ export type NavItem =
   | "policies"
   | "firewall"
   | "patch"
+  | "agents"
   | "assets"
   | "reports"
+  | "download-center"
+  | "telemetry"
   | "integrations"
   | "audit"
   | "settings";
@@ -21,15 +24,23 @@ export interface Toast {
   variant?: "default" | "success" | "error";
 }
 
+export interface AriaContext {
+  incidentId?: string;
+  incidentTitle?: string;
+  incidentSeverity?: string;
+  incidentTtp?: string;
+  tenantName?: string;
+  affectedAsset?: string;
+  prefillMessage?: string;
+}
+
 interface UIStore {
-  // tenant scope: "all" or a tenantId
   scope: string;
   setScope: (scope: string) => void;
 
   nav: NavItem;
   setNav: (nav: NavItem) => void;
 
-  // drawers/modals
   incidentDrawerId: string | null;
   openIncidentDrawer: (id: string) => void;
   closeIncidentDrawer: () => void;
@@ -42,7 +53,11 @@ interface UIStore {
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
 
-  // toasts
+  ariaOpen: boolean;
+  ariaContext: AriaContext | null;
+  openAria: (context?: AriaContext) => void;
+  closeAria: () => void;
+
   toasts: Toast[];
   addToast: (message: string, variant?: Toast["variant"]) => void;
   removeToast: (id: string) => void;
@@ -66,6 +81,11 @@ export const useUIStore = create<UIStore>((set) => ({
   commandPaletteOpen: false,
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
+
+  ariaOpen: false,
+  ariaContext: null,
+  openAria: (context) => set({ ariaOpen: true, ariaContext: context ?? null }),
+  closeAria: () => set({ ariaOpen: false, ariaContext: null }),
 
   toasts: [],
   addToast: (message, variant = "default") => {

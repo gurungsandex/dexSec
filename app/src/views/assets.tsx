@@ -1,77 +1,136 @@
 "use client";
 import { useState } from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Trash2 } from "lucide-react";
 import { useUIStore } from "@/store/ui-store";
-
-interface Asset {
-  id: string;
-  name: string;
-  type: "Laptop" | "Server" | "Network" | "Mobile" | "VM";
-  department: string;
-  owner: string;
-  location: string;
-  os: string;
-  status: "Active" | "Inactive" | "Retired";
-  risk: "Low" | "Medium" | "High" | "Critical";
-}
-
-const ASSETS: Asset[] = [
-  { id: "ast-1", name: "WS-FINANCE-01", type: "Laptop", department: "Finance", owner: "J. Smith", location: "HQ Floor 3", os: "Windows 11", status: "Active", risk: "Low" },
-  { id: "ast-2", name: "SRV-DC-PRIMARY", type: "Server", department: "IT", owner: "IT Ops", location: "Data Center", os: "Windows Server 2022", status: "Active", risk: "High" },
-  { id: "ast-3", name: "WS-CLINICAL-07", type: "Laptop", department: "Clinical", owner: "M. Torres", location: "Ward B", os: "Windows 10", status: "Active", risk: "Critical" },
-  { id: "ast-4", name: "NET-CORE-SW-01", type: "Network", department: "IT", owner: "NetOps", location: "Server Room", os: "Cisco IOS 17.x", status: "Active", risk: "Medium" },
-  { id: "ast-5", name: "WS-RD-LAB-12", type: "Laptop", department: "R&D", owner: "K. Patel", location: "Lab 2", os: "Ubuntu 22.04", status: "Active", risk: "Low" },
-  { id: "ast-6", name: "VM-PROD-WEB-03", type: "VM", department: "Engineering", owner: "DevOps", location: "Cloud (AWS)", os: "Amazon Linux 2", status: "Active", risk: "Medium" },
-  { id: "ast-7", name: "MOB-EXEC-CEO", type: "Mobile", department: "Executive", owner: "CEO", location: "Remote", os: "iOS 17.4", status: "Active", risk: "High" },
-  { id: "ast-8", name: "SRV-BACKUP-01", type: "Server", department: "IT", owner: "IT Ops", location: "Data Center", os: "Windows Server 2019", status: "Inactive", risk: "Low" },
-  { id: "ast-9", name: "WS-HR-05", type: "Laptop", department: "HR", owner: "L. Chen", location: "HQ Floor 2", os: "macOS 14", status: "Active", risk: "Low" },
-  { id: "ast-10", name: "NET-EDGE-FW-01", type: "Network", department: "IT", owner: "NetOps", location: "DMZ", os: "Palo Alto PAN-OS", status: "Active", risk: "Critical" },
-];
+import { useAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from "@/lib/hooks";
+import type { Asset } from "@/lib/supabase/types";
 
 const RISK_COLORS: Record<string, { bg: string; color: string }> = {
-  Low:      { bg: "var(--ok-tint)",   color: "var(--ok)"   },
-  Medium:   { bg: "var(--med-tint)",  color: "var(--med)"  },
-  High:     { bg: "var(--high-tint)", color: "var(--high)" },
-  Critical: { bg: "var(--crit-tint)", color: "var(--crit)" },
+  low:      { bg: "var(--ok-tint)",   color: "var(--ok)"   },
+  medium:   { bg: "var(--med-tint)",  color: "var(--med)"  },
+  high:     { bg: "var(--high-tint)", color: "var(--high)" },
+  critical: { bg: "var(--crit-tint)", color: "var(--crit)" },
 };
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  Active:   { bg: "var(--ok-tint)",   color: "var(--ok)"   },
-  Inactive: { bg: "var(--surface-3)", color: "var(--ink-4)" },
-  Retired:  { bg: "var(--surface-3)", color: "var(--ink-4)" },
+  active:        { bg: "var(--ok-tint)",   color: "var(--ok)"   },
+  inactive:      { bg: "var(--surface-3)", color: "var(--ink-4)" },
+  decommissioned:{ bg: "var(--surface-3)", color: "var(--ink-4)" },
 };
-
-const TYPE_ICONS: Record<string, string> = {
-  Laptop: "💻", Server: "🖥️", Network: "🔌", Mobile: "📱", VM: "☁️",
-};
-
-const DEPARTMENTS = ["All", ...Array.from(new Set(ASSETS.map((a) => a.department)))];
 
 function EditModal({ asset, onClose }: { asset: Asset; onClose: () => void }) {
   const { addToast } = useUIStore();
+  const update = useUpdateAsset();
+  const [form, setForm] = useState({ name: asset.name, owner: asset.owner ?? "", department: asset.department ?? "", status: asset.status, risk: asset.risk });
+
+  async function handleSave() {
+    await update.mutateAsync({ id: asset.id, ...form });
+    addToast("Asset updated", "success");
+    onClose();
+  }
+
   return (
     <div className="fixed inset-0 z-[800] flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0" style={{ background: "rgba(17,21,29,.4)" }} />
-      <div className="relative rounded-[13px] p-6 w-full max-w-[440px] fade-in flex flex-col gap-4"
+      <div className="relative rounded-[13px] p-6 w-full max-w-[440px] flex flex-col gap-4"
         style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-pop)" }}
         onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[16px] font-bold" style={{ color: "var(--ink)" }}>Edit Asset — {asset.name}</h2>
-        {[["Owner", asset.owner], ["Location", asset.location], ["Department", asset.department]].map(([label, val]) => (
-          <div key={label as string}>
-            <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>{label as string}</label>
-            <input defaultValue={val as string} className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
+        <h2 className="text-[16px] font-bold" style={{ color: "var(--ink)" }}>Edit Asset</h2>
+        {(["name", "owner", "department"] as const).map((field) => (
+          <div key={field}>
+            <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>{field}</label>
+            <input value={form[field]} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
+              className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
               style={{ background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--ink)" }} />
           </div>
         ))}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>Status</label>
+            <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as Asset["status"] }))}
+              className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
+              style={{ background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--ink)" }}>
+              {["active", "inactive", "decommissioned"].map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>Risk</label>
+            <select value={form.risk} onChange={(e) => setForm((f) => ({ ...f, risk: e.target.value as Asset["risk"] }))}
+              className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
+              style={{ background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--ink)" }}>
+              {["low", "medium", "high", "critical"].map((r) => <option key={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
         <div className="flex gap-2 mt-2">
           <button className="flex-1 py-2 rounded-[10px] text-[13px] font-semibold text-white"
-            style={{ background: "var(--primary)" }}
-            onClick={() => { addToast(`${asset.name} updated`, "success"); onClose(); }}>
-            Save Changes
+            style={{ background: "var(--primary)" }} disabled={update.isPending}
+            onClick={handleSave}>
+            {update.isPending ? "Saving…" : "Save Changes"}
           </button>
           <button className="px-4 py-2 rounded-[10px] text-[13px] font-semibold"
-            style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}
-            onClick={onClose}>
+            style={{ background: "var(--surface-3)", color: "var(--ink-2)" }} onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddModal({ onClose, tenantId }: { onClose: () => void; tenantId?: string }) {
+  const { addToast } = useUIStore();
+  const create = useCreateAsset();
+  const [form, setForm] = useState({ name: "", type: "Server" as Asset["type"], owner: "", department: "", risk: "medium" as Asset["risk"], status: "active" as Asset["status"] });
+
+  async function handleCreate() {
+    if (!form.name) return;
+    await create.mutateAsync({ ...form, tenant_id: tenantId ?? null });
+    addToast("Asset added", "success");
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-[800] flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0" style={{ background: "rgba(17,21,29,.4)" }} />
+      <div className="relative rounded-[13px] p-6 w-full max-w-[440px] flex flex-col gap-4"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-pop)" }}
+        onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-[16px] font-bold" style={{ color: "var(--ink)" }}>Add Asset</h2>
+        {(["name", "owner", "department"] as const).map((field) => (
+          <div key={field}>
+            <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>{field}</label>
+            <input value={form[field]} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
+              className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
+              style={{ background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--ink)" }} />
+          </div>
+        ))}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>Type</label>
+            <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as Asset["type"] }))}
+              className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
+              style={{ background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--ink)" }}>
+              {["Server", "Workstation", "Network Device", "Cloud Resource", "IoT", "Mobile"].map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>Risk</label>
+            <select value={form.risk} onChange={(e) => setForm((f) => ({ ...f, risk: e.target.value as Asset["risk"] }))}
+              className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
+              style={{ background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--ink)" }}>
+              {["low", "medium", "high", "critical"].map((r) => <option key={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <button className="flex-1 py-2 rounded-[10px] text-[13px] font-semibold text-white"
+            style={{ background: "var(--primary)" }} disabled={create.isPending}
+            onClick={handleCreate}>
+            {create.isPending ? "Adding…" : "Add Asset"}
+          </button>
+          <button className="px-4 py-2 rounded-[10px] text-[13px] font-semibold"
+            style={{ background: "var(--surface-3)", color: "var(--ink-2)" }} onClick={onClose}>
             Cancel
           </button>
         </div>
@@ -81,132 +140,117 @@ function EditModal({ asset, onClose }: { asset: Asset; onClose: () => void }) {
 }
 
 export function Assets() {
+  const { scope } = useUIStore();
+  const { data: assets = [], isLoading } = useAssets(scope);
+  const deleteAsset = useDeleteAsset();
   const { addToast } = useUIStore();
-  const [dept, setDept] = useState("All");
   const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<Asset | null>(null);
-  const [showNew, setShowNew] = useState(false);
+  const [deptFilter, setDeptFilter] = useState("All");
+  const [editTarget, setEditTarget] = useState<Asset | null | undefined>(undefined);
+  const [showAdd, setShowAdd] = useState(false);
 
-  const filtered = ASSETS.filter((a) =>
-    (dept === "All" || a.department === dept) &&
-    (search === "" || a.name.toLowerCase().includes(search.toLowerCase()) || a.owner.toLowerCase().includes(search.toLowerCase()))
-  );
+  const departments = ["All", ...Array.from(new Set((assets as Asset[]).map((a) => a.department).filter((d): d is string => !!d)))];
+  const filtered = (assets as Asset[]).filter((a) => {
+    const matchDept = deptFilter === "All" || a.department === deptFilter;
+    const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase()) || (a.owner ?? "").toLowerCase().includes(search.toLowerCase());
+    return matchDept && matchSearch;
+  });
+
+  async function handleDelete(id: string) {
+    await deleteAsset.mutateAsync(id);
+    addToast("Asset deleted", "default");
+  }
 
   return (
     <div className="p-6 fade-in flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[23px] font-bold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>Asset Management</h1>
-          <p className="text-[13px]" style={{ color: "var(--ink-4)" }}>{ASSETS.length} assets · {ASSETS.filter((a) => a.status === "Active").length} active</p>
+          <h1 className="text-[23px] font-bold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>Assets</h1>
+          <p className="text-[13px]" style={{ color: "var(--ink-4)" }}>{(assets as Asset[]).length} total assets</p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-semibold text-white"
-          style={{ background: "var(--primary)" }}
-          onClick={() => setShowNew(true)}>
+          style={{ background: "var(--primary)" }} onClick={() => setShowAdd(true)}>
           <Plus size={14} /> Add Asset
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {DEPARTMENTS.map((d) => (
-            <button key={d} onClick={() => setDept(d)}
+        <div className="relative flex-1 max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-4)" }} />
+          <input placeholder="Search assets…" value={search} onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 rounded-[10px] text-[13px] outline-none"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }} />
+        </div>
+        <div className="flex gap-1.5">
+          {departments.map((d) => (
+            <button key={d} onClick={() => setDeptFilter(d)}
               className="px-2.5 py-1 rounded-[7px] text-[12px] font-semibold transition-colors"
-              style={{ background: dept === d ? "var(--primary)" : "var(--surface)", color: dept === d ? "white" : "var(--ink-3)", border: "1px solid var(--border)" }}>
+              style={{ background: deptFilter === d ? "var(--primary)" : "var(--surface)", color: deptFilter === d ? "white" : "var(--ink-3)", border: "1px solid var(--border)" }}>
               {d}
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-[8px]" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <Search size={13} color="var(--ink-4)" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search assets…" className="outline-none text-[13px] w-48 bg-transparent"
-            style={{ color: "var(--ink)" }} />
-        </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-[13px] overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b text-[11px] font-semibold uppercase tracking-[.08em]" style={{ borderColor: "var(--border)", color: "var(--ink-4)" }}>
-              <th className="px-5 py-3 text-left">Asset</th>
-              <th className="px-3 py-3 text-left">Type</th>
-              <th className="px-3 py-3 text-left">Department</th>
-              <th className="px-3 py-3 text-left">Owner</th>
-              <th className="px-3 py-3 text-left">OS</th>
-              <th className="px-3 py-3 text-left">Status</th>
-              <th className="px-3 py-3 text-left">Risk</th>
-              <th className="px-3 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((a) => (
-              <tr key={a.id} className="border-t hover:bg-surface-2 transition-colors" style={{ borderColor: "var(--border-faint)" }}>
-                <td className="px-5 py-3 font-semibold mono text-[12.5px]" style={{ color: "var(--ink)" }}>{a.name}</td>
-                <td className="px-3 py-3">
-                  <span>{TYPE_ICONS[a.type]} </span>
-                  <span className="text-[12px]" style={{ color: "var(--ink-3)" }}>{a.type}</span>
-                </td>
-                <td className="px-3 py-3 text-[12.5px]" style={{ color: "var(--ink-2)" }}>{a.department}</td>
-                <td className="px-3 py-3 text-[12.5px]" style={{ color: "var(--ink-2)" }}>{a.owner}</td>
-                <td className="px-3 py-3 mono text-[11.5px]" style={{ color: "var(--ink-3)" }}>{a.os}</td>
-                <td className="px-3 py-3">
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                    style={{ background: STATUS_COLORS[a.status].bg, color: STATUS_COLORS[a.status].color }}>
-                    {a.status}
-                  </span>
-                </td>
-                <td className="px-3 py-3">
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                    style={{ background: RISK_COLORS[a.risk].bg, color: RISK_COLORS[a.risk].color }}>
-                    {a.risk}
-                  </span>
-                </td>
-                <td className="px-3 py-3 text-right">
-                  <button className="px-2.5 py-1 rounded-[7px] text-[11.5px] font-semibold"
-                    style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}
-                    onClick={() => setEditing(a)}>
-                    Edit
-                  </button>
-                </td>
+        {isLoading ? (
+          <div className="p-8 text-center text-[13px]" style={{ color: "var(--ink-4)" }}>Loading…</div>
+        ) : (
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b text-[11px] font-semibold uppercase tracking-[.08em]" style={{ borderColor: "var(--border)", color: "var(--ink-4)" }}>
+                <th className="px-5 py-3 text-left">Name</th>
+                <th className="px-3 py-3 text-left">Type</th>
+                <th className="px-3 py-3 text-left">Department</th>
+                <th className="px-3 py-3 text-left">Owner</th>
+                <th className="px-3 py-3 text-left">Status</th>
+                <th className="px-3 py-3 text-left">Risk</th>
+                <th className="px-3 py-3 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((asset) => (
+                <tr key={asset.id} className="border-t hover:bg-surface-2 transition-colors" style={{ borderColor: "var(--border-faint)" }}>
+                  <td className="px-5 py-3 font-medium" style={{ color: "var(--ink)" }}>{asset.name}</td>
+                  <td className="px-3 py-3 text-[12.5px]" style={{ color: "var(--ink-3)" }}>{asset.type}</td>
+                  <td className="px-3 py-3 text-[12.5px]" style={{ color: "var(--ink-3)" }}>{asset.department}</td>
+                  <td className="px-3 py-3 text-[12.5px]" style={{ color: "var(--ink-3)" }}>{asset.owner}</td>
+                  <td className="px-3 py-3">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize"
+                      style={{ background: STATUS_COLORS[asset.status]?.bg, color: STATUS_COLORS[asset.status]?.color }}>
+                      {asset.status}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize"
+                      style={{ background: RISK_COLORS[asset.risk]?.bg, color: RISK_COLORS[asset.risk]?.color }}>
+                      {asset.risk}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-right flex items-center justify-end gap-2">
+                    <button className="px-2.5 py-1 rounded-[7px] text-[11.5px] font-semibold"
+                      style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
+                      onClick={() => setEditTarget(asset)}>
+                      Edit
+                    </button>
+                    <button className="p-1.5 rounded-[7px] transition-colors"
+                      style={{ color: "var(--crit)" }}
+                      onClick={() => handleDelete(asset.id)}>
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && !isLoading && (
+                <tr><td colSpan={7} className="px-5 py-8 text-center text-[13px]" style={{ color: "var(--ink-4)" }}>No assets found</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {editing && <EditModal asset={editing} onClose={() => setEditing(null)} />}
-
-      {showNew && (
-        <div className="fixed inset-0 z-[800] flex items-center justify-center" onClick={() => setShowNew(false)}>
-          <div className="absolute inset-0" style={{ background: "rgba(17,21,29,.4)" }} />
-          <div className="relative rounded-[13px] p-6 w-full max-w-[440px] fade-in flex flex-col gap-4"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-pop)" }}
-            onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-[16px] font-bold" style={{ color: "var(--ink)" }}>Add Asset</h2>
-            {[["Asset Name", "e.g. WS-FINANCE-10"], ["Owner", "e.g. J. Smith"], ["Location", "e.g. HQ Floor 3"], ["OS", "e.g. Windows 11"]].map(([label, placeholder]) => (
-              <div key={label as string}>
-                <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: "var(--ink-4)" }}>{label as string}</label>
-                <input placeholder={placeholder as string} className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none"
-                  style={{ background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--ink)" }} />
-              </div>
-            ))}
-            <div className="flex gap-2 mt-2">
-              <button className="flex-1 py-2 rounded-[10px] text-[13px] font-semibold text-white"
-                style={{ background: "var(--primary)" }}
-                onClick={() => { addToast("Asset added", "success"); setShowNew(false); }}>
-                Add Asset
-              </button>
-              <button className="px-4 py-2 rounded-[10px] text-[13px] font-semibold"
-                style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}
-                onClick={() => setShowNew(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {editTarget && <EditModal asset={editTarget} onClose={() => setEditTarget(undefined)} />}
+      {showAdd && <AddModal onClose={() => setShowAdd(false)} tenantId={scope !== "all" ? scope : undefined} />}
     </div>
   );
 }

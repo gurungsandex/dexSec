@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Search, AlertTriangle, Laptop, Users, LayoutDashboard } from "lucide-react";
 import { useUIStore } from "@/store/ui-store";
-import { TENANTS, INCIDENTS, ENDPOINTS } from "@/lib/mock-data";
+import { useTenants, useIncidents, useEndpoints } from "@/lib/hooks";
+import type { Tenant, Incident, Endpoint } from "@/lib/supabase/types";
 
 interface Result {
   id: string;
@@ -12,13 +13,17 @@ interface Result {
   action: () => void;
 }
 
-// Inner component mounts fresh each time the palette opens (via key),
-// so state resets automatically without any setState-in-effect.
 function PaletteInner({ onClose }: { onClose: () => void }) {
   const { setScope, setNav, openIncidentDrawer, openEndpointDrawer } = useUIStore();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { data: tenantsData = [] } = useTenants();
+  const { data: incidentsData = [] } = useIncidents("all");
+  const { data: endpointsData = [] } = useEndpoints("all");
+  const tenants = tenantsData as Tenant[];
+  const incidents = incidentsData as Incident[];
+  const endpoints = endpointsData as Endpoint[];
 
   useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 30);
@@ -28,27 +33,35 @@ function PaletteInner({ onClose }: { onClose: () => void }) {
   const q = query.toLowerCase();
 
   const results: Result[] = [
-    ...TENANTS.filter((t) => !q || t.name.toLowerCase().includes(q) || t.industry.toLowerCase().includes(q)).map((t) => ({
-      id: `tenant-${t.id}`,
-      label: t.name,
-      sub: t.industry,
-      icon: <Users size={14} />,
-      action: () => { setScope(t.id); setNav("overview"); onClose(); },
-    })),
-    ...INCIDENTS.filter((i) => !q || i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q)).slice(0, 4).map((i) => ({
-      id: `inc-${i.id}`,
-      label: `${i.id} — ${i.title}`,
-      sub: i.severity,
-      icon: <AlertTriangle size={14} />,
-      action: () => { setNav("incidents"); openIncidentDrawer(i.id); onClose(); },
-    })),
-    ...ENDPOINTS.filter((e) => !q || e.hostname.toLowerCase().includes(q) || e.ip.includes(q)).slice(0, 3).map((e) => ({
-      id: `ep-${e.id}`,
-      label: e.hostname,
-      sub: e.ip,
-      icon: <Laptop size={14} />,
-      action: () => { setNav("endpoints"); openEndpointDrawer(e.id); onClose(); },
-    })),
+    ...tenants
+      .filter((t) => !q || t.name.toLowerCase().includes(q) || (t.industry ?? "").toLowerCase().includes(q))
+      .map((t) => ({
+        id: `tenant-${t.id}`,
+        label: t.name,
+        sub: t.industry ?? t.status,
+        icon: <Users size={14} />,
+        action: () => { setScope(t.id); setNav("overview"); onClose(); },
+      })),
+    ...incidents
+      .filter((i) => !q || i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q))
+      .slice(0, 4)
+      .map((i) => ({
+        id: `inc-${i.id}`,
+        label: `${i.id} — ${i.title}`,
+        sub: i.severity,
+        icon: <AlertTriangle size={14} />,
+        action: () => { setNav("incidents"); openIncidentDrawer(i.id); onClose(); },
+      })),
+    ...endpoints
+      .filter((e) => !q || e.hostname.toLowerCase().includes(q) || (e.ip_address ?? "").includes(q))
+      .slice(0, 3)
+      .map((e) => ({
+        id: `ep-${e.id}`,
+        label: e.hostname,
+        sub: e.ip_address ?? "",
+        icon: <Laptop size={14} />,
+        action: () => { setNav("endpoints"); openEndpointDrawer(e.id); onClose(); },
+      })),
     ...(!q || "overview".includes(q) ? [{
       id: "nav-overview", label: "Overview", sub: "Navigation",
       icon: <LayoutDashboard size={14} />,
@@ -56,7 +69,6 @@ function PaletteInner({ onClose }: { onClose: () => void }) {
     }] : []),
   ].slice(0, 8);
 
-  // Stable mutable box — updated via layout effect (before paint, after render)
   const stateRef = useRef({ results, selected });
   useEffect(() => {
     stateRef.current = { results, selected };
@@ -81,7 +93,7 @@ function PaletteInner({ onClose }: { onClose: () => void }) {
           ref={inputRef}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setSelected(0); }}
-          placeholder="Search clients, incidents, assets, policies…"
+          placeholder="Search clients, incidents, endpoints…"
           className="flex-1 text-[14px] outline-none"
           style={{ color: "var(--ink)", background: "transparent" }}
         />
@@ -115,7 +127,6 @@ function PaletteInner({ onClose }: { onClose: () => void }) {
 export function CommandPalette() {
   const { commandPaletteOpen, closeCommandPalette } = useUIStore();
 
-  // ⌘K global toggle
   const handleGlobalKey = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "k") {
       e.preventDefault();
@@ -139,7 +150,6 @@ export function CommandPalette() {
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* key forces fresh mount (and state reset) every time palette opens */}
         <PaletteInner key={String(commandPaletteOpen)} onClose={closeCommandPalette} />
       </div>
     </div>

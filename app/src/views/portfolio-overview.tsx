@@ -1,11 +1,25 @@
 "use client";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import {
-  TENANTS, INCIDENTS, getPortfolioStats, riskColor, type Severity,
-} from "@/lib/mock-data";
+import { useTenants, useIncidents } from "@/lib/hooks";
 import { useUIStore } from "@/store/ui-store";
 import { Sparkline, DonutChart, RiskMeter } from "@/components/ui/sparkline";
 import { SeverityBadge } from "@/components/ui/badge";
+import type { Tenant, Incident } from "@/lib/supabase/types";
+
+const AVATAR_COLORS = ["#6366f1","#8b5cf6","#ec4899","#f59e0b","#10b981","#3b82f6","#ef4444","#14b8a6"];
+function tenantShort(name: string) { return name.slice(0, 2).toUpperCase(); }
+function tenantColor(id: string) {
+  let h = 0;
+  for (const c of id) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+function riskColor(score: number): string {
+  if (score >= 67) return "var(--crit)";
+  if (score >= 50) return "var(--high)";
+  if (score >= 34) return "var(--med)";
+  return "var(--ok)";
+}
 
 function seededSpark(seed: number, n = 14): number[] {
   let a = seed;
@@ -16,8 +30,14 @@ function seededSpark(seed: number, n = 14): number[] {
   return vals;
 }
 
+function idSeed(id: string): number {
+  let h = 0;
+  for (const c of id) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
+  return Math.abs(h) % 1000;
+}
+
 function Delta({ value }: { value: number }) {
-  if (value === 0) return <span className="text-[11px] text-ink-4 flex items-center gap-0.5"><Minus size={11} />0</span>;
+  if (value === 0) return <span className="text-[11px] flex items-center gap-0.5" style={{ color: "var(--ink-4)" }}><Minus size={11} />0</span>;
   const up = value > 0;
   return (
     <span className="text-[11px] flex items-center gap-0.5 font-semibold"
@@ -43,11 +63,19 @@ function KpiTile({ label, value, delta, spark }: { label: string; value: string 
 
 export function PortfolioOverview() {
   const { setScope, setNav, openIncidentDrawer } = useUIStore();
-  const stats = getPortfolioStats(TENANTS);
-  const openIncidents = INCIDENTS.filter((i) => i.status !== "resolved");
+  const { data: tenantsData = [], isLoading: tenantsLoading } = useTenants();
+  const { data: incidentsData = [] } = useIncidents("all");
+  const tenants = tenantsData as Tenant[];
+  const allIncidents = incidentsData as Incident[];
 
-  const sevCounts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
-  openIncidents.forEach((i) => sevCounts[i.severity]++);
+  const openIncidents = allIncidents.filter((i) => i.status !== "resolved");
+  const criticalCount = openIncidents.filter((i) => i.severity === "critical").length;
+  const totalEndpoints = tenants.reduce((s, t) => s + t.endpoints_total, 0);
+  const avgRisk = tenants.length ? Math.round(tenants.reduce((s, t) => s + t.risk_score, 0) / tenants.length) : 0;
+  const avgPatch = tenants.length ? Math.round(tenants.reduce((s, t) => s + t.patch_compliance, 0) / tenants.length) : 0;
+
+  const sevCounts = { critical: 0, high: 0, medium: 0, low: 0 };
+  openIncidents.forEach((i) => { if (i.severity in sevCounts) sevCounts[i.severity as keyof typeof sevCounts]++; });
   const donutSlices = [
     { label: "Critical", value: sevCounts.critical, color: "var(--crit)" },
     { label: "High",     value: sevCounts.high,     color: "var(--high)" },
@@ -55,25 +83,30 @@ export function PortfolioOverview() {
     { label: "Low",      value: sevCounts.low,       color: "var(--low)" },
   ];
 
+  const priorityIncidents = openIncidents
+    .filter((i) => i.severity === "critical" || i.severity === "high")
+    .slice(0, 5);
+
+  if (tenantsLoading) {
+    return <div className="p-6 text-[13px]" style={{ color: "var(--ink-4)" }}>Loading…</div>;
+  }
+
   return (
     <div className="p-6 fade-in flex flex-col gap-6">
-      {/* Page title */}
       <div>
         <h1 className="text-[23px] font-bold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>Portfolio Overview</h1>
-        <p className="text-[13px]" style={{ color: "var(--ink-4)" }}>All {TENANTS.length} clients · real-time</p>
+        <p className="text-[13px]" style={{ color: "var(--ink-4)" }}>All {tenants.length} clients · real-time</p>
       </div>
 
-      {/* KPI row */}
       <div className="grid grid-cols-5 gap-4">
-        <KpiTile label="Endpoints"    value={stats.totalEndpoints.toLocaleString()} delta={+24} spark={seededSpark(1)} />
-        <KpiTile label="Open Incidents" value={stats.openIncidents} delta={+3} spark={seededSpark(2)} />
-        <KpiTile label="Critical"     value={stats.critical} delta={+1} spark={seededSpark(3)} />
-        <KpiTile label="Avg Risk"     value={stats.avgRisk} delta={+4} spark={seededSpark(4)} />
-        <KpiTile label="Patch Compliance" value={`${stats.avgPatch}%`} delta={-2} spark={seededSpark(5)} />
+        <KpiTile label="Endpoints"      value={totalEndpoints.toLocaleString()} delta={+24} spark={seededSpark(1)} />
+        <KpiTile label="Open Incidents" value={openIncidents.length}            delta={+3}  spark={seededSpark(2)} />
+        <KpiTile label="Critical"       value={criticalCount}                   delta={+1}  spark={seededSpark(3)} />
+        <KpiTile label="Avg Risk"       value={avgRisk}                         delta={+4}  spark={seededSpark(4)} />
+        <KpiTile label="Patch Compliance" value={`${avgPatch}%`}               delta={-2}  spark={seededSpark(5)} />
       </div>
 
       <div className="grid grid-cols-[1fr_320px] gap-4">
-        {/* Client risk table */}
         <div className="rounded-[13px] overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
           <div className="px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
             <h2 className="text-[14.5px] font-semibold" style={{ color: "var(--ink)" }}>Client Risk Posture</h2>
@@ -91,46 +124,48 @@ export function PortfolioOverview() {
               </tr>
             </thead>
             <tbody>
-              {TENANTS.map((t) => (
-                <tr
-                  key={t.id}
-                  className="border-t hover:bg-surface-2 cursor-pointer transition-colors"
-                  style={{ borderColor: "var(--border-faint)" }}
-                  onClick={() => { setScope(t.id); setNav("overview"); }}
-                >
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-[7px] flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                        style={{ background: t.color }}>{t.short}</div>
-                      <span className="font-medium" style={{ color: "var(--ink)" }}>{t.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3" style={{ color: "var(--ink-3)" }}>{t.industry}</td>
-                  <td className="px-3 py-3 text-right mono" style={{ color: "var(--ink-2)" }}>{t.endpoints.toLocaleString()}</td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2">
-                      <RiskMeter score={t.risk} width={60} />
-                      <span className="mono text-[12px]" style={{ color: riskColor(t.risk) }}>{t.risk}</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <span className="mono font-semibold" style={{ color: t.critical > 0 ? "var(--crit)" : "var(--ink-2)" }}>
-                      {t.openIncidents}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-right mono" style={{ color: t.patch < 80 ? "var(--high)" : "var(--ok)" }}>{t.patch}%</td>
-                  <td className="px-3 py-3 text-right">
-                    <Delta value={t.riskDelta} />
-                  </td>
-                </tr>
-              ))}
+              {tenants.map((t) => {
+                const tIncidents = allIncidents.filter((i) => i.tenant_id === t.id && i.status !== "resolved");
+                return (
+                  <tr
+                    key={t.id}
+                    className="border-t hover:bg-surface-2 cursor-pointer transition-colors"
+                    style={{ borderColor: "var(--border-faint)" }}
+                    onClick={() => { setScope(t.id); setNav("overview"); }}
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-[7px] flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                          style={{ background: tenantColor(t.id) }}>{tenantShort(t.name)}</div>
+                        <span className="font-medium" style={{ color: "var(--ink)" }}>{t.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3" style={{ color: "var(--ink-3)" }}>{t.industry ?? "—"}</td>
+                    <td className="px-3 py-3 text-right mono" style={{ color: "var(--ink-2)" }}>{t.endpoints_total.toLocaleString()}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2">
+                        <RiskMeter score={t.risk_score} width={60} />
+                        <span className="mono text-[12px]" style={{ color: riskColor(t.risk_score) }}>{t.risk_score}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span className="mono font-semibold"
+                        style={{ color: tIncidents.filter((i) => i.severity === "critical").length > 0 ? "var(--crit)" : "var(--ink-2)" }}>
+                        {tIncidents.length}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right mono" style={{ color: t.patch_compliance < 80 ? "var(--high)" : "var(--ok)" }}>{t.patch_compliance}%</td>
+                    <td className="px-3 py-3 text-right">
+                      <Sparkline data={seededSpark(idSeed(t.id), 7)} color="var(--primary)" width={40} height={18} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
-        {/* Right column */}
         <div className="flex flex-col gap-4">
-          {/* Incident severity donut */}
           <div className="p-5 rounded-[13px]" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
             <h2 className="text-[14.5px] font-semibold mb-4" style={{ color: "var(--ink)" }}>Incident Severity</h2>
             <div className="flex items-center gap-4">
@@ -147,31 +182,30 @@ export function PortfolioOverview() {
             </div>
           </div>
 
-          {/* Priority incidents */}
           <div className="p-5 rounded-[13px] flex-1" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
             <h2 className="text-[14.5px] font-semibold mb-3" style={{ color: "var(--ink)" }}>Priority Incidents</h2>
             <div className="flex flex-col gap-2">
-              {openIncidents
-                .filter((i) => i.severity === "critical" || i.severity === "high")
-                .slice(0, 5)
-                .map((inc) => {
-                  const t = TENANTS.find((x) => x.id === inc.tenantId);
-                  return (
-                    <button
-                      key={inc.id}
-                      className="text-left p-3 rounded-[10px] hover:bg-surface-2 transition-colors"
-                      style={{ border: "1px solid var(--border-faint)" }}
-                      onClick={() => openIncidentDrawer(inc.id)}
-                    >
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <SeverityBadge severity={inc.severity} />
-                        <span className="mono text-[11px]" style={{ color: "var(--ink-4)" }}>{inc.id}</span>
-                      </div>
-                      <div className="text-[12.5px] font-medium leading-snug" style={{ color: "var(--ink)" }}>{inc.title}</div>
-                      <div className="text-[11px] mt-0.5" style={{ color: "var(--ink-4)" }}>{t?.name}</div>
-                    </button>
-                  );
-                })}
+              {priorityIncidents.map((inc) => {
+                const t = tenants.find((x) => x.id === inc.tenant_id);
+                return (
+                  <button
+                    key={inc.id}
+                    className="text-left p-3 rounded-[10px] hover:bg-surface-2 transition-colors"
+                    style={{ border: "1px solid var(--border-faint)" }}
+                    onClick={() => openIncidentDrawer(inc.id)}
+                  >
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <SeverityBadge severity={inc.severity} />
+                      <span className="mono text-[11px]" style={{ color: "var(--ink-4)" }}>{inc.id}</span>
+                    </div>
+                    <div className="text-[12.5px] font-medium leading-snug" style={{ color: "var(--ink)" }}>{inc.title}</div>
+                    <div className="text-[11px] mt-0.5" style={{ color: "var(--ink-4)" }}>{t?.name}</div>
+                  </button>
+                );
+              })}
+              {priorityIncidents.length === 0 && (
+                <div className="text-center py-4 text-[13px]" style={{ color: "var(--ink-4)" }}>No priority incidents</div>
+              )}
             </div>
           </div>
         </div>
