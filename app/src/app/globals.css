@@ -1,0 +1,148 @@
+@import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+/* ─── Design tokens ─── */
+:root {
+  /* surfaces */
+  --bg:        #F4F6F9;
+  --surface:   #FFFFFF;
+  --surface-2: #FAFBFC;
+  --surface-3: #F2F4F7;
+
+  /* borders */
+  --border:       #E7EAF0;
+  --border-strong:#D8DDE6;
+  --border-faint: #EFF1F5;
+
+  /* ink */
+  --ink:   #11151D;
+  --ink-2: #39414F;
+  --ink-3: #6A7280;
+  --ink-4: #98A0AD;
+
+  /* brand */
+  --primary:       #3052E6;
+  --primary-hover: #2742C4;
+  --primary-press: #1F37A6;
+  --primary-tint:  #ECF0FE;
+  --primary-tint-2:#DCE3FC;
+
+  /* severity */
+  --crit:      #E5484D; --crit-tint:   #FDECEC;
+  --high:      #EE7117; --high-tint:   #FDF0E5;
+  --med:       #C99400; --med-tint:    #FAF2D8;
+  --low:       #5C6B82; --low-tint:    #EEF1F5;
+  --info:      #8A93A3; --info-tint:   #F1F3F6;
+
+  /* semantic */
+  --ok:     #18935A; --ok-tint:     #E6F5ED;
+  --warn:   #C99400; --warn-tint:   #FAF2D8;
+  --violet: #6B4FE0; --violet-tint: #EFEBFD;
+  --teal:   #0E9389; --teal-tint:   #E2F4F2;
+
+  /* shadows */
+  --shadow-sm:  0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.05);
+  --shadow-md:  0 4px 12px rgba(16,24,40,.07),0 1px 3px rgba(16,24,40,.05);
+  --shadow-lg:  0 16px 40px rgba(16,24,40,.14),0 4px 12px rgba(16,24,40,.08);
+  --shadow-pop: 0 12px 32px rgba(16,24,40,.16),0 2px 6px rgba(16,24,40,.08);
+
+  /* geometry */
+  --r-sm: 7px;
+  --r:    10px;
+  --r-md: 13px;
+  --r-lg: 18px;
+
+  --topbar-h: 60px;
+  --sidebar-w: 232px;
+}
+
+@theme inline {
+  /* map CSS vars → Tailwind theme */
+  --color-bg:           var(--bg);
+  --color-surface:      var(--surface);
+  --color-surface-2:    var(--surface-2);
+  --color-surface-3:    var(--surface-3);
+  --color-border:       var(--border);
+  --color-border-strong:var(--border-strong);
+  --color-ink:          var(--ink);
+  --color-ink-2:        var(--ink-2);
+  --color-ink-3:        var(--ink-3);
+  --color-ink-4:        var(--ink-4);
+  --color-primary:      var(--primary);
+  --color-primary-hover:var(--primary-hover);
+  --color-primary-tint: var(--primary-tint);
+  --color-crit:         var(--crit);
+  --color-crit-tint:    var(--crit-tint);
+  --color-high:         var(--high);
+  --color-high-tint:    var(--high-tint);
+  --color-med:          var(--med);
+  --color-med-tint:     var(--med-tint);
+  --color-low:          var(--low);
+  --color-low-tint:     var(--low-tint);
+  --color-ok:           var(--ok);
+  --color-ok-tint:      var(--ok-tint);
+  --color-violet:       var(--violet);
+  --color-violet-tint:  var(--violet-tint);
+  --color-teal:         var(--teal);
+  --color-teal-tint:    var(--teal-tint);
+
+  --font-sans: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: var(--r-sm);
+  --radius:    var(--r);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+
+  --shadow-sm:  var(--shadow-sm);
+  --shadow-md:  var(--shadow-md);
+  --shadow-lg:  var(--shadow-lg);
+  --shadow-pop: var(--shadow-pop);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #__next { height: 100%; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink-2);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+input, select, textarea { font-family: inherit; }
+
+::selection { background: var(--primary-tint-2); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #D3D8E0; border-radius: 8px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #BFC6D1; }
+
+.mono { font-family: var(--font-mono); font-feature-settings: "tnum" 1; }
+
+/* fade-in entrance — reduced-motion safe (opacity always 1) */
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in {
+    animation: fadeIn 180ms ease both;
+  }
+}
+@keyframes fadeIn {
+  from { opacity: .85; transform: translateY(6px); }
+  to   { opacity: 1;   transform: translateY(0); }
+}
+
+/* slide-in drawer */
+@media (prefers-reduced-motion: no-preference) {
+  .slide-in-right {
+    animation: slideInRight 200ms cubic-bezier(.25,.46,.45,.94) both;
+  }
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
