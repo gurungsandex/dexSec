@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { X, Clock, User, Shield } from "lucide-react";
+import { X } from "lucide-react";
 import { useUIStore } from "@/store/ui-store";
 import { INCIDENTS, ANALYSTS, TENANTS } from "@/lib/mock-data";
 import { SeverityBadge, StatusBadge } from "@/components/ui/badge";

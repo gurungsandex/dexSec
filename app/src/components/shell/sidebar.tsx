@@ -1,7 +1,7 @@
 "use client";
 import {
   LayoutDashboard, AlertTriangle, Monitor, Shield, Flame, Puzzle,
-  BarChart2, Settings, FileText, ClipboardList, Laptop, Users, ShieldCheck
+  BarChart2, Settings, FileText, ClipboardList, Laptop, ShieldCheck
 } from "lucide-react";
 import type { NavItem } from "@/store/ui-store";
 import { useUIStore } from "@/store/ui-store";

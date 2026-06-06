@@ -2,7 +2,7 @@
 import { TENANTS, INCIDENTS, riskColor } from "@/lib/mock-data";
 import { useUIStore } from "@/store/ui-store";
 import { ComplianceChip, SeverityBadge, StatusBadge } from "@/components/ui/badge";
-import { RingChart, DonutChart, RiskMeter, Sparkline } from "@/components/ui/sparkline";
+import { RingChart, DonutChart, Sparkline } from "@/components/ui/sparkline";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 function seededSpark(seed: number, n = 14): number[] {

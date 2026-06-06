@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { INCIDENTS, ANALYSTS } from "@/lib/mock-data";
 import { useUIStore } from "@/store/ui-store";
-import { SeverityBadge, StatusBadge } from "@/components/ui/badge";
+import { SeverityBadge } from "@/components/ui/badge";
 import type { IncidentStatus } from "@/lib/mock-data";
 
 const COLUMNS: { id: IncidentStatus; label: string }[] = [

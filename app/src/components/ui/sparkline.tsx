@@ -55,25 +55,30 @@ export function DonutChart({ slices, size = 120, strokeWidth = 18 }: { slices: D
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
   const total = slices.reduce((s, x) => s + x.value, 0) || 1;
-  let offset = 0;
+
+  // Pre-compute cumulative offsets so the map is pure (no mutation during render)
+  const offsets = slices.reduce<number[]>((acc, _slice, i) => {
+    const prev = acc[i - 1] ?? 0;
+    const prevDash = i > 0 ? (slices[i - 1].value / total) * circ : 0;
+    return [...acc, prev + prevDash];
+  }, []);
+
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {slices.map((s, i) => {
         const dash = (s.value / total) * circ;
         const gap = circ - dash;
-        const el = (
+        return (
           <circle
             key={i}
             cx={size / 2} cy={size / 2} r={r}
             fill="none"
             stroke={s.color} strokeWidth={strokeWidth}
             strokeDasharray={`${dash} ${gap}`}
-            strokeDashoffset={-offset}
+            strokeDashoffset={-(offsets[i] ?? 0)}
             style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
           />
         );
-        offset += dash;
-        return el;
       })}
     </svg>
   );
