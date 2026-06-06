@@ -12,14 +12,14 @@ import { TenantOverview } from "@/views/tenant-overview";
 import { Incidents } from "@/views/incidents";
 import { SocWorkspace } from "@/views/soc";
 import { Endpoints } from "@/views/endpoints";
+import { Policies } from "@/views/policies";
+import { Firewall } from "@/views/firewall";
+import { Patch } from "@/views/patch";
+import { Assets } from "@/views/assets";
+import { Reports } from "@/views/reports";
 import { StubView } from "@/views/stub";
 
 const STUB_LABELS: Record<string, string> = {
-  policies: "Policies",
-  firewall: "Firewall",
-  patch: "Patch Management",
-  assets: "Asset Management",
-  reports: "Reports",
   integrations: "Integrations",
   audit: "Audit Log",
   settings: "Settings",
@@ -28,12 +28,15 @@ const STUB_LABELS: Record<string, string> = {
 function MainContent() {
   const { nav, scope } = useUIStore();
 
-  if (nav === "overview") {
-    return scope === "all" ? <PortfolioOverview /> : <TenantOverview />;
-  }
+  if (nav === "overview")   return scope === "all" ? <PortfolioOverview /> : <TenantOverview />;
   if (nav === "incidents")  return <Incidents />;
   if (nav === "soc")        return <SocWorkspace />;
   if (nav === "endpoints")  return <Endpoints />;
+  if (nav === "policies")   return <Policies />;
+  if (nav === "firewall")   return <Firewall />;
+  if (nav === "patch")      return <Patch />;
+  if (nav === "assets")     return <Assets />;
+  if (nav === "reports")    return <Reports />;
 
   return <StubView title={STUB_LABELS[nav] ?? nav} />;
 }
