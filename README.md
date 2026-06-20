@@ -1,6 +1,6 @@
 # Dex Security Cloud — MSSP Multi-Tenant Security Console
 
-A **multi-tenant Managed Security Service Provider (MSSP) console** that enables a single provider team to manage security operations across multiple client organizations ("tenants").
+A **multi-tenant Managed Security Service Provider (MSSP) console** enabling a single provider team to manage security operations across multiple client organizations ("tenants").
 
 ---
 
@@ -27,14 +27,14 @@ Dex Security Cloud is a unified security operations platform designed for:
 
 ### Frontend
 - **Framework:** Next.js 16+ (App Router) + TypeScript + React 19
-- **UI Library:** shadcn/ui (future) or custom components
+- **UI Library:** shadcn/ui or custom components
 - **Styling:** Tailwind CSS v4 + design tokens
 - **State:** TanStack Query (server state) + Zustand/Context (UI state)
 - **Icons:** Lucide React
-- **Charts:** Recharts or visx (replacing hand-rolled SVG)
+- **Charts:** Recharts or visx
 
 ### Backend
-- **API:** NestJS, Next.js Route Handlers, FastAPI, or Go (preferred: typed/strongly-checked)
+- **API:** NestJS, Next.js Route Handlers, FastAPI, or Go (typed/strongly-checked)
 - **Real-time:** WebSockets or Server-Sent Events (SSE)
 - **Database:** PostgreSQL with Row-Level Security (RLS) for tenant isolation
 - **Auth:** OIDC/SAML (Auth0, WorkOS, Okta, Keycloak)
@@ -51,28 +51,19 @@ Dex Security Cloud is a unified security operations platform designed for:
 
 ```
 dexSec/
-├── public/                    # Static assets
 ├── src/
-│   ├── app/                  # Next.js app router pages
-│   ├── components/           # Reusable React components
+│   ├── app/                    # Next.js app router pages
+│   ├── components/             # Reusable React components
 │   │   ├── layout/
 │   │   ├── incidents/
 │   │   ├── endpoints/
 │   │   ├── policies/
 │   │   └── ...
-│   ├── lib/                  # Utilities, hooks, API clients
-│   ├── styles/               # Global CSS + design tokens
-│   └── types/                # TypeScript types
-├── design/                   # Design reference (HTML prototype)
-│   ├── index.html
-│   ├── styles.css
-│   ├── data.js
-│   ├── data_extra.js
-│   ├── store.jsx
-│   ├── components.jsx
-│   ├── ui_kit.jsx
-│   ├── views_*.jsx
-│   └── charts.jsx
+│   ├── lib/                    # Utilities, hooks, API clients
+│   ├── styles/                 # Global CSS + design tokens
+│   └── types/                  # TypeScript types
+├── public/                     # Static assets
+├── design-reference/           # High-fidelity design prototype
 ├── package.json
 ├── tsconfig.json
 ├── tailwind.config.ts
@@ -119,7 +110,7 @@ npm run lint
 
 ---
 
-## Key Screens & Workflows
+## Core Screens & Workflows
 
 ### 1. Portfolio Overview (All Clients)
 - **5 KPI tiles:** Endpoints, Open incidents, Critical, Avg risk score, Patch compliance
@@ -168,7 +159,7 @@ npm run lint
 
 ---
 
-## Design Tokens
+## Design System
 
 ### Color Palette
 | Token | Hex | Use |
@@ -262,7 +253,7 @@ npm run lint
 - [ ] Portfolio Overview + Per-Tenant Overview screens
 - [ ] Incident Queue + Detail drawer
 - [ ] Endpoints screen + device drawer
-- [ ] Mock data → Real API migration
+- [ ] API integration (replace mock data)
 
 ### Phase 2: Operations
 - [ ] SOC Workspace (triage board, auto-route)
@@ -291,29 +282,12 @@ npm run lint
 
 ---
 
-## Contributing
-
-This is an internal project. For questions or contributions, contact the security team.
-
----
-
-## Design Reference
-
-A high-fidelity **HTML/React prototype** is included in the `design/` folder:
-- Open `design/index.html` in a browser to preview the full design
-- All interactions and styling are final and intentional
-- Use this as the visual reference while building the production Next.js app
-
----
-
-## API & Backend Setup
-
-### Environment Variables
+## Environment Variables
 
 Create a `.env.local` file:
 
 ```env
-# Supabase / Database
+# Database
 DATABASE_URL=postgresql://user:pass@localhost:5432/dexsec
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -326,20 +300,9 @@ OIDC_CLIENT_ID=your_client_id
 OIDC_CLIENT_SECRET=your_client_secret
 OIDC_ISSUER=https://your-auth-provider.com
 
-# Vendor APIs (optional for development)
+# Vendor APIs (optional)
 CROWDSTRIKE_API_KEY=your_key
 SPLUNK_API_KEY=your_key
-```
-
-### Database Setup
-
-```bash
-# Run migrations (example with Supabase CLI)
-supabase db pull
-supabase db push
-
-# Seed with mock data (optional)
-npm run seed
 ```
 
 ---
@@ -359,9 +322,15 @@ npm run seed
 
 ---
 
-## Support & Issues
+## Contributing
 
-For bugs or feature requests, open an issue or contact the development team.
+This is an internal project. For questions or contributions, contact the security team.
+
+---
+
+## Design Reference
+
+A high-fidelity **HTML/React prototype** is included in `design-reference/` documenting the full intended look, layout, and behavior. Refer to this while building the production application.
 
 ---
 
