@@ -1,0 +1,44 @@
+# Proprietary License - Dex Security Cloud
+
+**Copyright © 2026 Dex Security (gurungsandex). All Rights Reserved.**
+
+## Terms & Conditions
+
+### 1. Permitted Uses
+This software ("Software") may only be used by authorized personnel under the following conditions:
+
+- **Internal Development Only**: Use is limited to development, testing, and deployment within authorized organizations only.
+- **No Commercial Distribution**: You may NOT repackage, redistribute, or offer this Software as a service to third parties.
+- **No Paid Services**: Offering access to this Software (modified or unmodified) as a SaaS, consulting service, or managed service is strictly prohibited without written consent.
+- **No Forking for Competitors**: Creating derivative products intended for commercial sale or competitive purposes is forbidden.
+
+### 2. Prohibited Uses
+- ❌ Copying the code and operating it as a competing paid security platform
+- ❌ Repackaging as a white-label or SaaS offering
+- ❌ Selling access, training, or consulting based on this codebase
+- ❌ Hosting on public cloud marketplaces (AWS Marketplace, Azure, etc.) as a third-party service
+- ❌ Obfuscating the source and claiming it as original work
+- ❌ Removing copyright notices, license headers, or attributions
+
+### 3. Source Code Protection
+- The source code remains the exclusive property of Dex Security
+- No permission is granted to fork, modify for resale, or create competing products
+- Any modifications must remain private and internal to the authorized organization
+
+### 4. Enforcement
+Violations will result in:
+- Immediate license termination
+- Cease & desist notices
+- Legal action for damages (including injunctive relief)
+- DMCA takedown notices if code is copied to unauthorized platforms
+
+### 5. Intellectual Property Rights
+All algorithms, designs, business logic, and trade secrets contained herein are proprietary. Reverse engineering, decompilation, or attempting to extract trade secrets is prohibited.
+
+## Disclaimer
+THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE AUTHORS MAKE NO REPRESENTATIONS ABOUT SUITABILITY FOR ANY PARTICULAR PURPOSE.
+
+---
+
+**Contact for Commercial Licensing**: [your-email@example.com]  
+**Questions or Inquiries**: Open an issue marked `[LICENSING]` in this repository.
